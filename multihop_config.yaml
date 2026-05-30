@@ -1,0 +1,40 @@
+model:
+  backend: "vllm"
+  tensor_parallel_size: 2
+  gpu_memory_utilization: 0.9
+  dtype: "auto"
+  trust_remote_code: true
+  max_model_len: 25600
+  max_logprobs: 50
+  # mistral related config
+  # tokenizer_mode: "mistral"
+  # config_format: "mistral"
+  # load_format: "mistral"
+
+dataset:
+  path: "datasets/musique/test_subsampled.jsonl"
+  name: "musique"
+  
+retrieval:
+  passage_path: "datacorpus/musique/corpus.tsv"
+  embedding_path: "datacorpus/musique/e5"
+  topk: 5
+  model_type: "e5-large-v2"
+
+compression:
+  compress_model_name: "Qwen/Qwen3-4B-Instruct-2507"
+  heads_json: "empirical/top_heads_supporting.json"
+  compress_threshold: "0.2"
+
+multihop:
+  max_hops: 5
+
+prompt:
+  system_message: "You are a helpful assistant."
+
+processing:
+  use_progress_bar: true
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
