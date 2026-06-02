@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from tqdm import tqdm
 
 from prompt_templates import PROMPT_TEMPLATES
-from model_utils import load_model, BaseModel, calculate_entropy_from_logprobs
+from utils.model_utils import load_model, BaseModel, calculate_entropy_from_logprobs
 from compressor import Compressor
 
 import sys

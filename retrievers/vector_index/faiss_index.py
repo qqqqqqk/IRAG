@@ -38,7 +38,7 @@ class FaissIndex(BaseIndex):
         self.max_index_batch_size = max_index_batch_size
 
     def search(self, query_vectors: np.array, top_k: int = 20) -> List[Tuple[List[object], List[float]]]:
-        query_vectors = np.asarray(query_vectors, dtype=np.float32)  # 更稳健的类型转换
+        query_vectors = np.asarray(query_vectors, dtype=np.float32)
         result = []
         batches = (len(query_vectors) - 1) // self.max_search_batch_size + 1
         for idx in range(batches):
@@ -83,14 +83,10 @@ class FaissIndex(BaseIndex):
         for fpath in tqdm(passage_embeddings, desc="Load embeddings"):
             with open(fpath, "rb") as fin:
                 data = pickle.load(fin)
-                # 兼容两种格式：
-                # 1. 旧格式: (cur_ids, cur_embeddings) 元组
-                # 2. 新格式: 只有 cur_embeddings (numpy.ndarray)
                 if isinstance(data, tuple) and len(data) == 2:
                     cur_ids, cur_embeddings = data
                     ids.extend(cur_ids)
                 else:
-                    # 新格式：只有 embeddings，自动生成 ids
                     cur_embeddings = data
                     num_embeddings = cur_embeddings.shape[0] if len(cur_embeddings.shape) == 2 else 1
                     cur_ids = list(range(id_counter, id_counter + num_embeddings))

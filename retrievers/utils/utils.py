@@ -17,9 +17,6 @@ def load_passages(fpath):
             reader = csv.reader(fin, delimiter="\t")
             for k, row in enumerate(reader):
                 if not row[0] == "id":
-                    # 兼容两种格式：
-                    # 1. 旧格式: id, text, title (3列)
-                    # 2. 新格式: id, text (2列)
                     if len(row) >= 3:
                         ex = {"id": row[0], "title": row[2], "text": row[1]}
                     else:

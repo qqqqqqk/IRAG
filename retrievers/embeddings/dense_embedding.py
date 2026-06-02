@@ -15,7 +15,7 @@ class DenseEmbedding(BaseEmbedding):
         embedding_vector_size: int,
         no_fp16: bool = False,
         pooling_type: Pooling = "average",
-        device: str = "cuda:2",  # 新增device参数，支持"cuda"、"cuda:X"或"cpu"
+        device: str = "cuda:2",
     ):
         super().__init__()
         self.model_name_or_path = model_name_or_path
@@ -55,7 +55,7 @@ class DenseEmbedding(BaseEmbedding):
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             outputs = self.model(**inputs)
             embeddings = self.pooling(outputs.last_hidden_state, inputs["attention_mask"])
-            embeddings = embeddings.cpu().float().numpy()  # 确保转换为 float32
+            embeddings = embeddings.cpu().float().numpy()
             return embeddings
 
     def pooling(self, last_hidden_states, attention_mask) -> torch.Tensor:

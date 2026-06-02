@@ -9,8 +9,8 @@ from datetime import datetime
 from tqdm import tqdm
 
 from prompt_templates import PROMPT_TEMPLATES
-from model_utils import load_model
-from config_utils import ConfigManager
+from utils.model_utils import load_model
+from utils.config_utils import ConfigManager
 from multihop_inference import process_dataset
 
 import sys
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_batch_args():
+    parser = argparse.ArgumentParser(description='Batch Multihop Inference')
     parser.add_argument('--config', type=str, default='multihop_config.yaml',
                        help='base config file path')
     parser.add_argument('--model_name', type=str, required=True,
@@ -88,10 +89,10 @@ def process_one_combination(
     config = config_manager.config
     
     logger.info("=" * 60)
-    logger.info(f"processing combination：max_hops={max_hops}, topk={topk}, compress_threshold={compress_threshold}")
-    logger.info(f"model name：{config['model']['name']}")
-    logger.info(f"compress model name：{config['compression']['compress_model_name']}")
-    logger.info(f"heads json：{config['compression']['heads_json']}")
+    logger.info(f"processing combination: max_hops={max_hops}, topk={topk}, compress_threshold={compress_threshold}")
+    logger.info(f"model name: {config['model']['name']}")
+    logger.info(f"compress model name: {config['compression']['compress_model_name']}")
+    logger.info(f"heads json: {config['compression']['heads_json']}")
     logger.info("=" * 60)
     
     system_message = config['prompt'].get('system_message', 'You are a helpful assistant.')
@@ -173,14 +174,14 @@ def main():
     
     logger.info("=" * 80)
     logger.info("Batch Multihop Inference Task")
-    logger.info(f"model name：{config_manager.config['model']['name']}")
-    logger.info(f"compress model name：{config_manager.config['compression']['compress_model_name']}")
-    logger.info(f"heads json：{config_manager.config['compression']['heads_json']}")
-    logger.info(f"dataset path：{config_manager.config['dataset']['path']}")
-    logger.info(f"max_hops list：{max_hops_list}")
-    logger.info(f"topk list：{topk_list}")
-    logger.info(f"compress_threshold list：{compress_threshold_list}")
-    logger.info(f"total combinations processed：{len(max_hops_list) * len(topk_list) * len(compress_threshold_list)}")
+    logger.info(f"model name: {config_manager.config['model']['name']}")
+    logger.info(f"compress model name: {config_manager.config['compression']['compress_model_name']}")
+    logger.info(f"heads json: {config_manager.config['compression']['heads_json']}")
+    logger.info(f"dataset path: {config_manager.config['dataset']['path']}")
+    logger.info(f"max_hops list: {max_hops_list}")
+    logger.info(f"topk list: {topk_list}")
+    logger.info(f"compress_threshold list: {compress_threshold_list}")
+    logger.info(f"total combinations to process: {len(max_hops_list) * len(topk_list) * len(compress_threshold_list)}")
     logger.info("=" * 80)
 
     logger.info(f"loading model: {args.model_name} ...")
@@ -241,7 +242,7 @@ def main():
         for j, topk in enumerate(topk_list, 1):
             for k, compress_threshold in enumerate(compress_threshold_list, 1):
                 current = (i - 1) * len(topk_list) * len(compress_threshold_list) + (j - 1) * len(compress_threshold_list) + k
-                logger.info(f"\n[{current}/{total_combinations}] 开始处理...")
+                logger.info(f"\n[{current}/{total_combinations}] processing...")
                 
                 success = process_one_combination(
                     model=model,

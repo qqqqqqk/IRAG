@@ -61,7 +61,6 @@ Now, the context and original question are as follows.
 
 
 
-# 添加更多prompt模板
 PROMPT_TEMPLATES = {
     "answer_without_context": ANSWER_GENERATION_PROMPT_WITHOUT_CONTEXT,
     "context_judge": CONTEXT_JUDGMENT_PROMPT,

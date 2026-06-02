@@ -3,7 +3,7 @@ import os
 import pickle
 import sys
 
-from embeddings import Embedder, ModelTypes
+from .embeddings import Embedder, ModelTypes
 from retrievers.utils.utils import load_passages
 
 

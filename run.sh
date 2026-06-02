@@ -69,7 +69,6 @@ for MODEL in "${MODELS[@]}"; do
     --max_hops "${MAX_HOPS}" \
     --topk "${TOPK}" \
     --compress_threshold "${COMPRESS_THRESHOLD}" \
-    ${BACKEND_ARG} \
     2>&1 | tee "${LOG_FILE}"
     
 done

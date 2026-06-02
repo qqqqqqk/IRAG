@@ -2,7 +2,7 @@ from .dense_embedding import DenseEmbedding
 
 
 class Contriever(DenseEmbedding):
-    def __init__(self, model_name_or_path: str, device: str = "cpu"):  # 默认使用CPU，避免与vLLM争抢GPU显存
+    def __init__(self, model_name_or_path: str, device: str = "cpu"):
         if model_name_or_path is None:
             model_name_or_path = "facebook/contriever-msmarco"
         super().__init__(

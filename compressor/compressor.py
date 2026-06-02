@@ -122,7 +122,7 @@ class Compressor:
             attn_implementation="flash_attention_2" 
         ).eval()
         
-        # 早退机制
+        # early exit
         max_needed_layer = max(layer_idx for (layer_idx, head_idx) in self.target_heads_indices)
         self.model.model.early_exit_layer = max_needed_layer + 1
 
