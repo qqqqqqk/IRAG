@@ -63,10 +63,12 @@ class Retriever(object):
 
     def search(self, query: Union[str, List[str]], top_k: int = 10, return_scores: bool = False):
         query = [query] if isinstance(query, str) else query
-        query_vectors = self.embedder.embed(query)
+        query_vectors = self.embedder.embed(query, is_query=True)
         top_ids_scores = self.index.search(query_vectors, top_k)
+        # print(self.passage_map.keys())
+        # print(top_ids_scores)
         docs = [
-            [self.passage_map[doc_id] for doc_id in top_docs]
+            [self.passage_map[int(doc_id)] for doc_id in top_docs]
             for top_docs, top_scores in top_ids_scores
         ]
         docs = [doc_list[:top_k] for doc_list in docs]

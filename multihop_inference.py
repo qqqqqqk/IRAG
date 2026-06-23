@@ -14,6 +14,7 @@ from compressor import Compressor
 
 import sys
 from retrievers import Retriever
+from reranker import Reranker
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ def format_context(qa_history: List[Dict[str, str]], original_question: str) -> 
     
     for i, qa in enumerate(qa_history):
         context_parts.append(f"follow up sub-question: {qa['sub_question']}")
-        context_parts.append(f"intermediate answer: {qa['answer']}")
+        context_parts.append(f"intermediate answer: {qa['sub_answer']}")
     
     return "\n".join(context_parts)
 
@@ -136,17 +137,17 @@ def process_single_sample(
     model: BaseModel,
     sample: Dict[str, Any],
     retriever: Optional[Retriever],
-    compressor: Optional[Compressor] = None,
+    reranker: Optional[Reranker] = None,
     max_hops: int = 8,
     topk: int = 3,
-    compress_threshold: float = 0.2,
+    rerank_threshold: float = 0.2,
     system_message: str = "You are a helpful assistant.",
 ) -> Dict[str, Any]:
     """Process a single sample with multiihop inference."""
 
     sample_id = sample["question_id"]
     original_question = sample["question_text"]
-    gold_answer = sample["answers_objects"][0]["spans"]
+    # gold_answer = sample["answers_objects"][0]["spans"]
 
     qa_history = []
     
@@ -173,7 +174,7 @@ def process_single_sample(
         ]
 
         formatted_prompt = model.format_prompt(messages)
-        context_judge_output = model.generate(formatted_prompt, max_tokens=128) 
+        context_judge_output = model.generate(formatted_prompt, max_tokens=10240) 
 
         context_judge_response = context_judge_output["text"]
         can_answer, content = parse_context_judge_response(context_judge_response)
@@ -196,77 +197,97 @@ def process_single_sample(
         formatted_prompt = model.format_prompt(messages)
         sub_q_judge_output = model.generate(
             formatted_prompt,
-            max_tokens=128,
+            max_tokens=10240,
             return_logprobs=True,
             logprobs_top_k=50
         )
 
         sub_q_judge_response = sub_q_judge_output["text"]
 
-        token_logprobs = sub_q_judge_output.get("token_logprobs", [])
-        token_ids = sub_q_judge_output.get("token_ids", [])
-        token_texts = sub_q_judge_output.get("token_texts", [])
-        
-        token_texts, token_logprobs, token_ids = process_token_logprobs(
-            token_texts, token_logprobs, token_ids, sub_q_judge_response
-        )
-        mean_entropy = calculate_mean_entropy(token_logprobs)
-        response_lower = sub_q_judge_response.strip().lower()
-        is_unknown = "unknown" in response_lower
-        knows_answer = mean_entropy <= 0.1 and not is_unknown
+        # 注释掉了 Uncertainty 的部分
 
-        internal_answer = sub_q_judge_response.strip()
+        # token_logprobs = sub_q_judge_output.get("token_logprobs", [])
+        # token_ids = sub_q_judge_output.get("token_ids", [])
+        # token_texts = sub_q_judge_output.get("token_texts", [])
         
-        if knows_answer and internal_answer:
-            sub_answer = internal_answer
-        else:
-            if retriever is not None:
-                try:
-                    retrieved_docs = retriever.search(sub_question, top_k=topk)
-                    if retrieved_docs and len(retrieved_docs) > 0:
-                        docs_for_query = retrieved_docs[0] if isinstance(retrieved_docs[0], list) else retrieved_docs
-                        
-                        if compressor is not None:
-                            compressed_docs = compressor.compress(
-                                query=sub_question,
-                                docs=docs_for_query[:topk],
-                                threshold=compress_threshold
-                            )
-                            compressed_docs = [doc for doc in compressed_docs if doc['text'].strip()]
-                            docs_for_query = compressed_docs
-                        
-                        retrieved_context = "\n\n".join([
-                            f"[Doc {i+1}] : {doc['text']}"
-                            for i, doc in enumerate(docs_for_query[:topk])
-                        ])
-                    else:
-                        raise ValueError("No retrieved documents found.")
-                except Exception as e:
-                    raise ValueError(f"Retrieval failed: {e}")
+        # token_texts, token_logprobs, token_ids = process_token_logprobs(
+        #     token_texts, token_logprobs, token_ids, sub_q_judge_response
+        # )
+        # mean_entropy = calculate_mean_entropy(token_logprobs)
+        # response_lower = sub_q_judge_response.strip().lower()
+        # is_unknown = "unknown" in response_lower
+        # knows_answer = mean_entropy <= 0.1 and not is_unknown
+
+        # internal_answer = sub_q_judge_response.strip()
+        
+        # if knows_answer and internal_answer:
+        #     sub_answer = internal_answer
+        # else:
+
+        if retriever is not None:
+            # try:
+            retrieved_docs = retriever.search(sub_question, top_k=topk)
+            if retrieved_docs and len(retrieved_docs) > 0:
+                docs_for_query = retrieved_docs[0] if isinstance(retrieved_docs[0], list) else retrieved_docs
+                
+                # if compressor is not None:
+                #     compressed_docs = compressor.compress(
+                #         query=sub_question,
+                #         docs=docs_for_query[:topk],
+                #         threshold=compress_threshold
+                #     )
+                #     compressed_docs = [doc for doc in compressed_docs if doc['text'].strip()]
+                #     docs_for_query = compressed_docs
+
+                # 使用 Reranker 重排序检索到的文档
+                if reranker is not None:
+                    start_time = time.time()
+                    reranked_docs = reranker.rerank(
+                        question=sub_question,
+                        documents=docs_for_query[:topk],
+                        t=rerank_threshold,
+                        batch_size=1 #测试一个一个运行的时间
+                    )
+                    rerank_time = time.time() - start_time
+                    # hop_info["compress_time"] = rerank_time
+                    # 过滤掉 text 为空的文档
+                    reranked_docs = [doc for doc in reranked_docs if doc['text'].strip()]
+                    docs_for_query = reranked_docs
+                
+                retrieved_context = "\n\n".join([
+                    f"[Doc {i+1}] : {doc['text']}"
+                    for i, doc in enumerate(docs_for_query[:topk])
+                ])
             else:
-                raise ValueError("Retriever not available.")
+                raise ValueError("No retrieved documents found.")
+            # except Exception as e:
+            #     raise ValueError(f"Retrieval failed: {e}")
+        else:
+            raise ValueError("Retriever not available.")
 
-            sub_q_answer_prompt_filled = sub_q_answer_prompt.format(
-                context=retrieved_context,
-                sub_question=sub_question
-            )
-            
-            messages = [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": sub_q_answer_prompt_filled}
-            ]
-            
-            formatted_prompt = model.format_prompt(messages)
-            sub_q_answer_output = model.generate(formatted_prompt, max_tokens=128)
+        sub_q_answer_prompt_filled = sub_q_answer_prompt.format(
+            context=retrieved_context,
+            sub_question=sub_question
+        )
+        
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": sub_q_answer_prompt_filled}
+        ]
+        
+        formatted_prompt = model.format_prompt(messages)
+        sub_q_answer_output = model.generate(formatted_prompt, max_tokens=10240)
 
-            sub_q_answer_response = sub_q_answer_output["text"]
-            sub_answer, answer_success = parse_sub_q_answer_response(sub_q_answer_response)
-            if not answer_success:
-                sub_answer = "No relevant info, need to optimize sub-question"
+        sub_q_answer_response = sub_q_answer_output["text"]
+        sub_answer, answer_success = parse_sub_q_answer_response(sub_q_answer_response)
+        if not answer_success:
+            sub_answer = "No relevant info, need to optimize sub-question"
 
         qa_history.append({
             "sub_question": sub_question,
-            "answer": sub_answer
+            # "retrieved_docs": retrieved_context,
+            "retrieved_docs": docs_for_query[:topk],
+            "sub_answer": sub_answer
         })
     
     if final_answer is None:
@@ -283,7 +304,7 @@ def process_single_sample(
         
         formatted_prompt = model.format_prompt(messages)
 
-        final_output = model.generate(formatted_prompt, max_tokens=128)
+        final_output = model.generate(formatted_prompt, max_tokens=10240)
         final_response = final_output["text"]
         final_answer = parse_force_answer_response(final_response)
     
@@ -291,7 +312,8 @@ def process_single_sample(
     result = {
         "sample_id": sample_id,
         "original_question": original_question,
-        "gold_answer": gold_answer,
+        # "gold_answer": gold_answer,
+        "qa_history": qa_history,
         "predicted_answer": final_answer,
     }
     
@@ -302,11 +324,11 @@ def process_dataset(
     model: BaseModel,
     dataset: List[Dict[str, Any]],
     retriever: Optional[Retriever],
-    compressor: Optional[Compressor],
+    reranker: Optional[Reranker],
     output_path: str,
     max_hops: int = 8,
     topk: int = 5,
-    compress_threshold: float = 0.2,
+    rerank_threshold: float = 0.2,
     system_message: str = "You are a helpful assistant.",
     use_progress_bar: bool = True,
 ) -> List[Dict[str, Any]]:
@@ -336,31 +358,31 @@ def process_dataset(
             if sample_id in processed_ids:
                 continue
             
-            try:
-                result = process_single_sample(
-                    model=model,
-                    sample=sample,
-                    retriever=retriever,
-                    compressor=compressor,
-                    max_hops=max_hops,
-                    topk=topk,
-                    compress_threshold=compress_threshold,
-                    system_message=system_message,
-                )
+            # try:
+            result = process_single_sample(
+                model=model,
+                sample=sample,
+                retriever=retriever,
+                reranker=reranker,
+                max_hops=max_hops,
+                topk=topk,
+                rerank_threshold=rerank_threshold,
+                system_message=system_message,
+            )
+            
+            results.append(result)
+            fout.write(json.dumps(result, ensure_ascii=False) + '\n')
+            fout.flush()
                 
-                results.append(result)
-                fout.write(json.dumps(result, ensure_ascii=True) + '\n')
-                fout.flush()
-                
-            except Exception as e:
-                logger.error(f"process sample {sample_id} failed: {e}")
+            # except Exception as e:
+            #     logger.error(f"process sample {sample_id} failed: {e}")
     
     return results
 
 
 def run_multihop_inference(
     model_name: str,
-    compress_model_name: str,
+    reranker_model_name: str,
     dataset_path: str,
     output_path: str,
     passage_path: str,
@@ -368,7 +390,7 @@ def run_multihop_inference(
     heads_json: str,
     max_hops: int = 8,
     topk: int = 5,
-    compress_threshold: float = 0.2,
+    rerank_threshold: float = 0.2,
     backend: str = "vllm",
     system_message: str = "You are a helpful assistant.",
     **model_kwargs
@@ -387,12 +409,16 @@ def run_multihop_inference(
     logger.info("retriever loaded successfully")
     
     logger.info(f"loading compressor...")
-    compressor = Compressor(
-        model_path=compress_model_name,
-        heads_file=heads_json
+    # compressor = Compressor(
+    #     model_path=compress_model_name,
+    #     heads_file=heads_json
+    # )
+    # logger.info("compressor loaded successfully")
+    reranker = Reranker(
+        model_name=reranker_model_name
     )
-    logger.info("compressor loaded successfully")
-    
+    logger.info("reranker loaded successfully")
+
     logger.info(f"loading dataset: {dataset_path}")
     with open(dataset_path, 'r', encoding='utf-8') as f:
         dataset = [json.loads(line) for line in f]
@@ -402,11 +428,11 @@ def run_multihop_inference(
         model=model,
         dataset=dataset,
         retriever=retriever,
-        compressor=compressor,
+        reranker=reranker,
         output_path=output_path,
         max_hops=max_hops,
         topk=topk,
-        compress_threshold=compress_threshold,
+        rerank_threshold=rerank_threshold,
         system_message=system_message,
     )
     

@@ -3,8 +3,8 @@ import os
 import pickle
 import sys
 
-from .embeddings import Embedder, ModelTypes
-from retrievers.utils.utils import load_passages
+from embeddings import Embedder, ModelTypes
+from utils.utils import load_passages
 
 
 def parse_args():

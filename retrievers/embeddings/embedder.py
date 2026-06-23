@@ -5,9 +5,11 @@ import numpy as np
 import torch
 from tqdm import TqdmExperimentalWarning, tqdm
 from tqdm.rich import tqdm_rich
+import inspect
 
-from .ada_embedding import AdaEmbedding
-from .contriever import Contriever
+# from .ada_embedding import AdaEmbedding
+# from .contriever import Contriever
+from .qwen3 import Qwen3Embedding
 from .e5 import E5BaseV2Embedding, E5LargeV2Embedding
 from .utils.normalize_text import normalize
 
@@ -15,25 +17,28 @@ warnings.filterwarnings("ignore", category=TqdmExperimentalWarning)
 
 
 EmbeddingModelTypes = Literal[
-    "contriever",
+    # "contriever",
     "e5-base-v2",
     "e5-large-v2",
-    "e5-mistral-instruct",
-    "ada-002",
+    # "e5-mistral-instruct",
+    # "ada-002",
+    "Qwen3-Embedding-4B"
 ]
 
 ModelTypes = {
-    "contriever": Contriever,
+    # "contriever": Contriever,
     "e5-base-v2": E5BaseV2Embedding,
     "e5-large-v2": E5LargeV2Embedding,
-    "ada-002": AdaEmbedding,
+    # "ada-002": AdaEmbedding,
+    "Qwen3-Embedding-4B": Qwen3Embedding
 }
 
 ModelCheckpointMapping = {
-    "contriever": "facebook/contriever-msmarco",
+    # "contriever": "facebook/contriever-msmarco",
     "e5-base-v2": "intfloat/e5-large-v2",
     "e5-large-v2": "intfloat/e5-large-v2",
-    "ada-002": "text-embedding-ada-002",
+    # "ada-002": "text-embedding-ada-002",
+    "Qwen3-Embedding-4B": "Qwen/Qwen3-Embedding-4B"
 }
 
 
@@ -88,10 +93,10 @@ class Embedder(object):
                 chunkEndIdx = min((idx + 1) * self.chunk_size, len(texts))
                 chunk = texts[chunkStartIdx:chunkEndIdx]
                 chunk_ids = ids[chunkStartIdx:chunkEndIdx]
-                chunk_embeddings = self.embed(chunk, verbose=True)
+                chunk_embeddings = self.embed(chunk, verbose=False)
                 yield idx, (chunk_ids, chunk_embeddings)
 
-    def embed(self, textBatch, verbose=False):
+    def embed(self, textBatch, verbose=False, is_query=False):
         embeddings = np.array([])
         textBatch = [self.process_text(text) for text in textBatch]
         batches = (len(textBatch) - 1) // self.batch_size + 1
@@ -105,7 +110,10 @@ class Embedder(object):
                 start_idx = idx * self.batch_size
                 end_idx = min((idx + 1) * self.batch_size, len(textBatch))
                 batch = textBatch[start_idx:end_idx]
-                curEmbeddings = self.embedder.embed_batch(batch)
+                if "is_query" in inspect.signature(self.embedder.embed_batch).parameters:
+                    curEmbeddings = self.embedder.embed_batch(batch, is_query=is_query)
+                else:
+                    curEmbeddings = self.embedder.embed_batch(batch)
                 embeddings = np.vstack((embeddings, curEmbeddings)) if embeddings.size else curEmbeddings
         return embeddings
 

@@ -119,7 +119,7 @@ class Compressor:
             device_map={"": 3},
             dtype=torch.bfloat16, 
             trust_remote_code=True, 
-            attn_implementation="flash_attention_2" 
+            # attn_implementation="flash_attention_2" 
         ).eval()
         
         # early exit

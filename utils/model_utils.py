@@ -5,9 +5,10 @@ import os
 import math
 import re
 from vllm import LLM, SamplingParams
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
 import logging
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ class VLLMModel(BaseModel):
                     token_texts.append(token_text)
             
             # QwQ-32B 
-            is_qwq = 'QwQ-32B' in self.model_name or 'qwq-32b' in self.model_name.lower()
+            is_qwq = 'QwQ-32B' in self.model_name or 'qwq-32b' in self.model_name.lower() or "Qwen3" in self.model_name or "qwen3" in self.model_name.lower()
             
             if is_qwq:
                 full_original_text = output.text
@@ -212,3 +213,87 @@ class VLLMModel(BaseModel):
         except Exception as e:
             logger.error(f"Generation failed: {e}")
             raise
+
+class TransformersModel(BaseModel):
+    def __init__(self, model_name: str, **kwargs):
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", dtype="bfloat16")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        
+    def generate(self,
+                prompt: str,
+                max_tokens: int = 256,
+                temperature: float = 0.6,#0.1
+                top_p: float = 0.95,
+                top_k: int = 20,
+                repetition_penalty: float = 1.05,
+                logprobs_top_k: int = 100,
+                return_logprobs: bool = False,
+                **kwargs) -> Dict[str, Any]:
+        # print(prompt)
+        model_inputs = self.tokenizer([prompt], return_tensors="pt").to(self.model.device)
+        # unused_kwargs = ['return_logprobs', 'logprobs_top_k', 'max_tokens']
+        
+        generated_ids = self.model.generate(
+            **model_inputs,
+            temperature=temperature,
+            max_new_tokens=max_tokens,
+            top_p=top_p,
+            top_k=top_k,
+            repetition_penalty=repetition_penalty,
+        )
+        generated_ids = [
+            output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+        ]
+
+        response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+        return {"text": response}
+        
+    def format_prompt(self, messages: List[Dict[str, str]]) -> str:
+        return self.tokenizer.apply_chat_template(
+            messages,
+            add_generation_config=True,
+            tokenize=False
+        )
+
+class OpenAICompatibleModel(BaseModel):
+    def __init__(self, model_name, **kwargs):
+        # TODO: Remove the detailed url and key from the codes when submitting.
+        self.client = OpenAI(
+            base_url="https://api.deepseek.com",
+            api_key="sk-626980e5950c47e5b9bc133e90253646"
+        )
+        self.model_name = model_name
+
+    def format_prompt(self, messages: List[Dict[str, str]]):
+        return messages
+
+    def generate(self,
+                messages: List[Dict[str, str]],
+                max_tokens: int = 256,
+                temperature: float = 0.6,#0.1
+                top_p: float = 0.95,
+                top_k: int = 20,
+                repetition_penalty: float = 1.05,
+                logprobs_top_k: int = 100,
+                return_logprobs: bool = False,
+                **kwargs) -> Dict[str, Any]:
+
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            **kwargs
+        )
+        resp_text = response.choices[0].message.content
+        return {"text": resp_text}
+
+def load_model(model_name, backend, **model_kwagrs):
+    if "deepseek" in model_name:
+        return OpenAICompatibleModel(model_name, **model_kwagrs)
+    elif not "2.5" in model_name:
+        return VLLMModel(model_name, **model_kwagrs)
+    else:
+        return TransformersModel(model_name, **model_kwagrs)
