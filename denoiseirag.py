@@ -236,7 +236,7 @@ def process_single_sample_custom(
         if qa_history:  
             context = "\n\n".join([
                     f"[Doc {i+1}] : {doc['text']}"
-                    for i, doc in enumerate(qa) for qa in enumerate(qa_history)
+                    for qa in enumerate(qa_history) for i, doc in enumerate(qa)
                 ])
         else:
             context = " "
