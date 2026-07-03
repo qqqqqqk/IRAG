@@ -42,7 +42,7 @@ def main(opts):
         output_file = os.path.join(output_dir, f"passages_{idx:02d}")
         with open(output_file, "wb") as f:
             pickle.dump((ids, embeddings), f)
-        print(f"Save {len(ids)} embeddings to {output_file}")
+        # print(f"Save {len(ids)} embeddings to {output_file}")
 
 
 if __name__ == "__main__":

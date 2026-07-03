@@ -283,6 +283,7 @@ def process_single_sample(
         if not answer_success:
             sub_answer = "No relevant info, need to optimize sub-question"
 
+        # TODO: 只保存 retrieval docs
         qa_history.append({
             "sub_question": sub_question,
             # "retrieved_docs": retrieved_context,

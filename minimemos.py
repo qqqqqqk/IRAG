@@ -205,8 +205,6 @@ def parse_batch_args():
                        help='base config file path')
     parser.add_argument('--model_name', type=str, required=True,
                        help='model name or path')
-    # parser.add_argument('--compress_model_name', type=str, required=True,
-    #                    help='compress model name or path')
     parser.add_argument('--dataset_name', type=str, default=None,
                        help='dataset name')
     parser.add_argument('--dataset_path', type=str, default=None,
@@ -217,8 +215,6 @@ def parse_batch_args():
                        help='passage path')
     parser.add_argument('--embedding_path', type=str, default=None,
                        help='embedding path')
-    parser.add_argument('--heads_json', type=str, default=None,
-                       help='heads json path')
     parser.add_argument('--retriever_model_type', type=str, default=None)
     parser.add_argument("--retriever_model_path", type=str, default=None)
     parser.add_argument('--reranker_model_name', type=str, required=True)
@@ -250,9 +246,6 @@ def main():
     
     config_manager.config['compression']['reranker_model_name'] = args.reranker_model_name
     
-    if args.heads_json is not None:
-        config_manager.config['compression']['heads_json'] = args.heads_json
-    
     if args.retriever_model_type is not None:
         config_manager.config['retrieval']["model_type"] = args.retriever_model_type
 
@@ -268,7 +261,6 @@ def main():
     logger.info("Batch Multihop Inference Task")
     logger.info(f"model name: {config_manager.config['model']['name']}")
     logger.info(f"compress model name: {config_manager.config['compression']['compress_model_name']}")
-    logger.info(f"heads json: {config_manager.config['compression']['heads_json']}")
     logger.info(f"dataset path: {config_manager.config['dataset']['path']}")
     logger.info("=" * 80)
 

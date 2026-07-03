@@ -8,18 +8,17 @@ MODELS=(
 
 DATASET_NAME="lifebench"
 
+RETRIEVER_MODEL_TYPE="qwen3"
+RETRIEVER_MODEL_PATH="/data/lzb/models/Qwen3-Embedding-4B"
 RERANK_MODEL="/data/lzb/models/Qwen3-Reranker-4B"
 
-# heads json path
-HEADS_JSON="./compressor/top_heads_supporting.json"
-
 # dataset path
-DATASET_PATH="datasets/${DATASET_NAME}/test_subsampled.jsonl"
+DATASET_PATH="/data/agentic-rag/datasets/${DATASET_NAME}/test_subsampled.jsonl"
 
 # passage path
 # embedding path
-PASSAGE_PATH="datacorpus/${DATASET_NAME}/corpus.jsonl"
-EMBEDDING_PATH="datacorpus/${DATASET_NAME}/e5"  
+PASSAGE_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/corpus.jsonl"
+EMBEDDING_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/${RETRIEVER_MODEL_TYPE}"  
 
 # config file
 BASE_CONFIG="multihop_config.yaml"
@@ -32,7 +31,6 @@ echo "========================================="
 echo "model num:${#MODELS[@]}"
 echo "dataset path:${DATASET_PATH}"
 echo "rerank model:${RERANK_MODEL}"
-echo "heads json:${HEADS_JSON}"
 echo "log dir:${LOG_DIR}"
 echo "========================================="
 
@@ -56,9 +54,8 @@ for MODEL in "${MODELS[@]}"; do
     --dataset_path "${DATASET_PATH}" \
     --passage_path "${PASSAGE_PATH}" \
     --embedding_path "${EMBEDDING_PATH}" \
-    --heads_json "${HEADS_JSON}" \
-    --retriever_model_type Qwen3-Embedding-4B \
-    --retriever_model_path /data/lzb/models/Qwen3-Embedding-4B \
+    --retriever_model_type "${RETRIEVER_MODEL_TYPE}" \
+    --retriever_model_path "${RETRIEVER_MODEL_PATH}" \
     2>&1 | tee "${LOG_FILE}"
     
 done

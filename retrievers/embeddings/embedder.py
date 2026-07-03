@@ -6,10 +6,12 @@ import torch
 from tqdm import TqdmExperimentalWarning, tqdm
 from tqdm.rich import tqdm_rich
 import inspect
+from tqdm import tqdm
 
 # from .ada_embedding import AdaEmbedding
 # from .contriever import Contriever
 from .qwen3 import Qwen3Embedding
+from .custom_emb import CustomEmbedding
 from .e5 import E5BaseV2Embedding, E5LargeV2Embedding
 from .utils.normalize_text import normalize
 
@@ -22,7 +24,8 @@ EmbeddingModelTypes = Literal[
     "e5-large-v2",
     # "e5-mistral-instruct",
     # "ada-002",
-    "Qwen3-Embedding-4B"
+    "qwen3",
+    "custom"
 ]
 
 ModelTypes = {
@@ -30,7 +33,8 @@ ModelTypes = {
     "e5-base-v2": E5BaseV2Embedding,
     "e5-large-v2": E5LargeV2Embedding,
     # "ada-002": AdaEmbedding,
-    "Qwen3-Embedding-4B": Qwen3Embedding
+    "qwen3": Qwen3Embedding,
+    "custom": CustomEmbedding
 }
 
 ModelCheckpointMapping = {
@@ -87,8 +91,8 @@ class Embedder(object):
 
         chunkBatch = (len(texts) - 1) // self.chunk_size + 1
         with torch.no_grad():
-            for idx in range(chunkBatch):
-                print(f"Processing chunk {idx + 1}/{chunkBatch}")
+            for idx in tqdm(range(chunkBatch)):
+                # print(f"Processing chunk {idx + 1}/{chunkBatch}")
                 chunkStartIdx = idx * self.chunk_size
                 chunkEndIdx = min((idx + 1) * self.chunk_size, len(texts))
                 chunk = texts[chunkStartIdx:chunkEndIdx]
