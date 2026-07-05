@@ -17,7 +17,7 @@ DATASET_PATH="/data/agentic-rag/datasets/${DATASET_NAME}/test_subsampled.jsonl"
 
 # passage path
 # embedding path
-PASSAGE_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/corpus.jsonl"
+PASSAGE_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/corpus.tsv"
 EMBEDDING_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/${RETRIEVER_MODEL_TYPE}"  
 
 # config file

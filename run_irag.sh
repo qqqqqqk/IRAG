@@ -6,7 +6,7 @@ MODELS=(
   "deepseek-v4-flash"
 )
 
-DATASET_NAME="hotpot"
+DATASET_NAME="musique"
 
 RETRIEVER_MODEL_TYPE="qwen3"
 RETRIEVER_MODEL_PATH="/data/lzb/models/Qwen3-Embedding-4B"
@@ -17,7 +17,7 @@ DATASET_PATH="/data/agentic-rag/datasets/${DATASET_NAME}/test_subsampled.jsonl"
 
 # passage path
 # embedding path
-PASSAGE_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/corpus.jsonl"
+PASSAGE_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/corpus.tsv"
 EMBEDDING_PATH="/data/agentic-rag/datacorpus/${DATASET_NAME}/${RETRIEVER_MODEL_TYPE}"  
 
 # config file

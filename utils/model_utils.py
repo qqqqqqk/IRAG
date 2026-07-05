@@ -260,8 +260,8 @@ class OpenAICompatibleModel(BaseModel):
     def __init__(self, model_name, **kwargs):
         # TODO: Remove the detailed url and key from the codes when submitting.
         self.client = OpenAI(
-            base_url="https://api.deepseek.com",
-            api_key="sk-626980e5950c47e5b9bc133e90253646"
+            base_url="",
+            api_key=""
         )
         self.model_name = model_name
 

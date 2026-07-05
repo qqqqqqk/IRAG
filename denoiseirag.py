@@ -437,7 +437,7 @@ def main():
         logger.error(f"✗ dataset loading failed: {e}")
         return
 
-    output_path = f"./results_minimemos/{args.dataset_name}/{args.model_name}"
+    output_path = f"./results_denoiseirag/{args.dataset_name}/{args.model_name}"
     os.makedirs(output_path, exist_ok=True)
     output_file_path = os.path.join(output_path, f"result.jsonl")
     with open(output_file_path, "r") as f:
